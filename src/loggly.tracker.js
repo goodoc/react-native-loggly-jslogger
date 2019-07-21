@@ -48,7 +48,7 @@
             var _onerror = window.onerror;
             //send console error messages to Loggly
             window.onerror = function (msg, url, line, col, err){
-                tracker.push({ 
+                tracker.push({
                     category: 'BrowserJsException',
                     exception: {
                         message: msg,
@@ -152,7 +152,7 @@
                 return;
             }
 
-            self.track(data);
+            return self.track(data);
 
 
         },
@@ -160,23 +160,20 @@
             // inject session id
             data.sessionId = this.session_id;
 
-            try {
-                //creating an asynchronous XMLHttpRequest
-                var xmlHttp = new XMLHttpRequest();
-                xmlHttp.open('POST', this.inputUrl, true); //true for asynchronous request
-                if (tracker.useUtfEncoding === true) {
-                    xmlHttp.setRequestHeader('Content-Type', 'text/plain; charset=utf-8');
-                } else {
-                    xmlHttp.setRequestHeader('Content-Type', 'text/plain');
-                }
-                xmlHttp.send(JSON.stringify(data));
-
-            } catch (ex) {
-                if (window && window.console && typeof window.console.log === 'function') {
-                    console.log("Failed to log to loggly because of this exception:\n" + ex);
-                    console.log("Failed log data:", data);
-                }
-            }
+            return fetch(this.inputUrl, {
+              method: 'POST',
+              headers: {
+                Accept: 'application/json',
+                'Content-Type': tracker.useUtfEncoding ? 'text/plain; charset=utf-8' : 'text/plain'
+              },
+              body: JSON.stringify(data),
+            })
+            .catch(function(ex) {
+              if (window && window.console && typeof window.console.log === 'function') {
+                console.log("Failed to log to loggly because of this exception:\n" + ex);
+                console.log("Failed log data:", data);
+              }
+            })
         },
         /**
             *  These cookie functions are not a global utilities.  It is for purpose of this tracker only
@@ -213,4 +210,7 @@
 
     window.LogglyTracker = LogglyTracker;   // if others want to instantiate more than one tracker
 
-})(window, document);
+})(
+  typeof window !== "undefined" ? window : { onerror: function(){} },
+  typeof document !== "undefined" ? document : { cookie: "", location: { protocol: "https:" } }
+);
